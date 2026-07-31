@@ -1,0 +1,24 @@
+import { cookies } from "next/headers";
+import { API_URL } from "./api";
+import { parseSession, SESSION_COOKIE, type Session } from "./session";
+
+export async function getServerSession(): Promise<Session | null> {
+  const store = await cookies();
+  return parseSession(store.get(SESSION_COOKIE)?.value);
+}
+
+/** Server-side GET with the session token attached. Returns null instead of
+ * throwing so pages can render a friendly empty state. */
+export async function apiGet<T>(path: string): Promise<T | null> {
+  const session = await getServerSession();
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      cache: "no-store",
+      headers: session ? { Authorization: `Token ${session.token}` } : undefined,
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}

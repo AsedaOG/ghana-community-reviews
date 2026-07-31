@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme {
+  /* Ghana-inspired palette: forest green primary, gold accent, warm neutrals */
+  --color-primary-50: #f0f7f2;
+  --color-primary-100: #d9ebde;
+  --color-primary-500: #1d7a46;
+  --color-primary-600: #166437;
+  --color-primary-700: #114f2c;
+  --color-primary-800: #0d3f23;
+  --color-primary-900: #092e1a;
+  --color-gold-100: #fdf3d7;
+  --color-gold-400: #f0c04a;
+  --color-gold-500: #e3ab26;
+  --color-gold-600: #c08f14;
+  --color-clay-500: #ce1126;
+}
+
+body {
+  @apply bg-stone-50 text-stone-800 antialiased;
+}

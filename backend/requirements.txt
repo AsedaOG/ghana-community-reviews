@@ -1,0 +1,11 @@
+Django>=5.0,<6.0
+djangorestframework>=3.15
+django-cors-headers>=4.3
+django-filter>=24.2
+dj-database-url>=2.1
+Pillow>=10.3
+# Optional: PostgreSQL driver (uncomment when using DATABASE_URL=postgres://...)
+# psycopg[binary]>=3.1
+# Optional: Cloudflare R2 / AWS S3 media storage
+# django-storages>=1.14
+# boto3>=1.34
