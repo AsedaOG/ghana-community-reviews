@@ -24,7 +24,10 @@ class ModerationQueueView(APIView):
         flagged = (
             Review.objects.filter(status=Review.Status.FLAGGED)
             .select_related("listing", "reviewer", "owner_response")
-            .prefetch_related("photos", "reviewer__badges__badge", "evidence")
+            .prefetch_related(
+                "photos", "reviewer__badges__badge", "evidence",
+                "votes", "replies__reviewer",
+            )
         )
         return Response({
             "pending_claims": BusinessClaimSerializer(pending_claims, many=True).data,

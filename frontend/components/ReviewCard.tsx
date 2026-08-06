@@ -1,6 +1,11 @@
 /* eslint-disable @next/next/no-img-element */
-import type { Review } from "@/lib/api";
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import type { Review, ReviewReply } from "@/lib/api";
 import { mediaUrl } from "@/lib/api";
+import { apiFetch, getSession } from "@/lib/client-session";
 import RatingStars from "./RatingStars";
 import VerificationBadge from "./VerificationBadge";
 
@@ -11,6 +16,92 @@ export default function ReviewCard({
   review: Review;
   showListing?: boolean;
 }) {
+  const session = getSession();
+  const isOwner = !!session && session.username === review.reviewer;
+
+  const [deleted, setDeleted] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [rating, setRating] = useState(review.rating);
+  const [title, setTitle] = useState(review.title);
+  const [body, setBody] = useState(review.body);
+  const [savedRating, setSavedRating] = useState(review.rating);
+  const [savedTitle, setSavedTitle] = useState(review.title);
+  const [savedBody, setSavedBody] = useState(review.body);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const [upvotes, setUpvotes] = useState(review.upvotes);
+  const [downvotes, setDownvotes] = useState(review.downvotes);
+  const [myVote, setMyVote] = useState(review.my_vote);
+  const [voting, setVoting] = useState(false);
+  const [replies, setReplies] = useState<ReviewReply[]>(review.replies);
+
+  async function saveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (rating === 0) {
+      setEditError("Please choose a star rating.");
+      return;
+    }
+    setSaving(true);
+    setEditError(null);
+    const res = await apiFetch<{ detail?: string }>(`/reviews/${review.id}/`, {
+      method: "PATCH",
+      body: { rating, title: title.trim(), body: body.trim() },
+    });
+    setSaving(false);
+    if (!res.ok) {
+      setEditError(
+        (res.data as { detail?: string } | null)?.detail ?? "Could not save changes."
+      );
+      return;
+    }
+    setSavedRating(rating);
+    setSavedTitle(title.trim());
+    setSavedBody(body.trim());
+    setEditing(false);
+  }
+
+  function cancelEdit() {
+    setRating(savedRating);
+    setTitle(savedTitle);
+    setBody(savedBody);
+    setEditError(null);
+    setEditing(false);
+  }
+
+  async function deleteReview() {
+    if (!window.confirm("Delete this review? This can't be undone.")) return;
+    setDeleting(true);
+    const res = await apiFetch(`/reviews/${review.id}/`, { method: "DELETE" });
+    setDeleting(false);
+    if (res.ok) setDeleted(true);
+  }
+
+  async function vote(value: "up" | "down") {
+    if (!session || voting) return;
+    setVoting(true);
+    const res = await apiFetch<{
+      upvotes: number;
+      downvotes: number;
+      my_vote: "up" | "down" | null;
+    }>(`/reviews/${review.id}/vote/`, { method: "POST", body: { value } });
+    if (res.ok && res.data) {
+      setUpvotes(res.data.upvotes);
+      setDownvotes(res.data.downvotes);
+      setMyVote(res.data.my_vote);
+    }
+    setVoting(false);
+  }
+
+  const myReplyCount = session
+    ? replies.filter((r) => r.reviewer === session.username).length
+    : 0;
+  const canReplyMore = review.can_reply_unlimited || myReplyCount < review.reply_limit;
+
+  if (deleted) return null;
+
   return (
     <article className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -36,21 +127,93 @@ export default function ReviewCard({
             </p>
           </div>
         </div>
-        <VerificationBadge level={review.verification_level} />
+        <div className="flex items-center gap-2">
+          {isOwner && !editing && (
+            <>
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="text-xs font-medium text-stone-500 hover:text-primary-700"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={deleteReview}
+                className="text-xs font-medium text-stone-500 hover:text-red-600 disabled:opacity-50"
+              >
+                {deleting ? "Deleting…" : "Delete"}
+              </button>
+            </>
+          )}
+          <VerificationBadge level={review.verification_level} />
+        </div>
       </div>
 
-      <div className="mt-3">
-        <RatingStars rating={review.rating} />
-        <h4 className="mt-1 font-semibold text-stone-900">{review.title}</h4>
-        <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-stone-600">
-          {review.body}
-        </p>
-        {review.has_evidence && (
-          <p className="mt-2 text-xs font-medium text-primary-600">
-            📎 Supporting evidence submitted for admin verification
+      {editing ? (
+        <form onSubmit={saveEdit} className="mt-3 space-y-3">
+          <div className="flex gap-1 text-2xl">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setRating(i)}
+                onMouseEnter={() => setHoverRating(i)}
+                onMouseLeave={() => setHoverRating(0)}
+                aria-label={`${i} star${i === 1 ? "" : "s"}`}
+                className={i <= (hoverRating || rating) ? "text-gold-500" : "text-stone-300"}
+              >
+                ★
+              </button>
+            ))}
+          </div>
+          <input
+            required
+            maxLength={150}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm font-semibold outline-none focus:border-primary-500"
+          />
+          <textarea
+            required
+            rows={4}
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
+          />
+          {editError && <p className="text-xs text-red-600">{editError}</p>}
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+            >
+              {saving ? "Saving…" : "Save changes"}
+            </button>
+            <button
+              type="button"
+              onClick={cancelEdit}
+              className="text-xs font-medium text-stone-500"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="mt-3">
+          <RatingStars rating={savedRating} />
+          <h4 className="mt-1 font-semibold text-stone-900">{savedTitle}</h4>
+          <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-stone-600">
+            {savedBody}
           </p>
-        )}
-      </div>
+          {review.has_evidence && (
+            <p className="mt-2 text-xs font-medium text-primary-600">
+              📎 Supporting evidence submitted for admin verification
+            </p>
+          )}
+        </div>
+      )}
 
       {review.photos.length > 0 && (
         <div className="mt-3 flex gap-2 overflow-x-auto">
@@ -84,6 +247,141 @@ export default function ReviewCard({
           </p>
         </div>
       )}
+
+      <div className="mt-4 flex items-center gap-2 border-t border-stone-100 pt-3">
+        <button
+          type="button"
+          disabled={!session || voting}
+          onClick={() => vote("up")}
+          title={session ? "I agree" : "Log in to vote"}
+          className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+            myVote === "up" ? "bg-primary-100 text-primary-700" : "text-stone-500 hover:bg-stone-100"
+          }`}
+        >
+          👍 {upvotes}
+        </button>
+        <button
+          type="button"
+          disabled={!session || voting}
+          onClick={() => vote("down")}
+          title={session ? "I disagree" : "Log in to vote"}
+          className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+            myVote === "down" ? "bg-red-50 text-red-600" : "text-stone-500 hover:bg-stone-100"
+          }`}
+        >
+          👎 {downvotes}
+        </button>
+      </div>
+
+      <ReviewReplies
+        reviewId={review.id}
+        replies={replies}
+        onReplied={(r) => setReplies((prev) => [...prev, r])}
+        canReplyMore={canReplyMore}
+        unlimited={review.can_reply_unlimited}
+        limit={review.reply_limit}
+        myReplyCount={myReplyCount}
+        loggedIn={!!session}
+      />
     </article>
+  );
+}
+
+function ReviewReplies({
+  reviewId,
+  replies,
+  onReplied,
+  canReplyMore,
+  unlimited,
+  limit,
+  myReplyCount,
+  loggedIn,
+}: {
+  reviewId: number;
+  replies: ReviewReply[];
+  onReplied: (reply: ReviewReply) => void;
+  canReplyMore: boolean;
+  unlimited: boolean;
+  limit: number;
+  myReplyCount: number;
+  loggedIn: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [body, setBody] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = body.trim();
+    if (!trimmed) return;
+    setBusy(true);
+    setError(null);
+    const res = await apiFetch<ReviewReply & { detail?: string }>("/replies/", {
+      method: "POST",
+      body: { review: reviewId, body: trimmed },
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setError((res.data as { detail?: string } | null)?.detail ?? "Could not post reply.");
+      return;
+    }
+    onReplied(res.data as ReviewReply);
+    setBody("");
+    setOpen(false);
+  }
+
+  return (
+    <div className="mt-3">
+      {replies.length > 0 && (
+        <ul className="space-y-2 border-l-2 border-stone-100 pl-3">
+          {replies.map((r) => (
+            <li key={r.id} className="text-sm">
+              <span className="font-semibold text-stone-700">{r.reviewer}</span>{" "}
+              <span className="text-stone-600">{r.body}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {!loggedIn ? (
+        <p className="mt-2 text-xs text-stone-400">
+          <Link href="/login" className="text-primary-700 hover:underline">
+            Log in
+          </Link>{" "}
+          to vote or reply.
+        </p>
+      ) : !canReplyMore ? (
+        <p className="mt-2 text-xs text-stone-400">
+          You&apos;ve reached the {limit}-reply limit for free accounts on this review.
+        </p>
+      ) : open ? (
+        <form onSubmit={submit} className="mt-2 flex gap-2">
+          <input
+            autoFocus
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="Write a reply…"
+            className="flex-1 rounded-lg border border-stone-300 px-3 py-1.5 text-sm outline-none focus:border-primary-500"
+          />
+          <button
+            type="submit"
+            disabled={busy}
+            className="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+          >
+            {busy ? "Posting…" : "Reply"}
+          </button>
+        </form>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="mt-2 text-xs font-medium text-primary-700 hover:underline"
+        >
+          Reply{!unlimited && ` (${limit - myReplyCount} left)`}
+        </button>
+      )}
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
   );
 }

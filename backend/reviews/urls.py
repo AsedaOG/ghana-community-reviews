@@ -15,11 +15,12 @@ from .owner_views import (
     OwnerOverviewView,
     OwnerRespondView,
 )
-from .views import EvidenceViewSet, ReviewViewSet
+from .views import EvidenceViewSet, ReviewReplyViewSet, ReviewViewSet
 
 router = DefaultRouter()
 router.register("reviews", ReviewViewSet, basename="review")
 router.register("evidence", EvidenceViewSet, basename="evidence")
+router.register("replies", ReviewReplyViewSet, basename="review-reply")
 
 urlpatterns = router.urls + [
     path("owner/overview/", OwnerOverviewView.as_view(), name="owner-overview"),

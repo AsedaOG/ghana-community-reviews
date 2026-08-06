@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Listing, Review } from "@/lib/api";
 import { apiFetch, getSession } from "@/lib/client-session";
+import { useListingSuggestions } from "@/lib/useListingSuggestions";
 
 interface Claim {
   id: number;
@@ -236,26 +237,43 @@ export default function DashboardPage() {
 
 function ClaimBox({ onClaimed }: { onClaimed: () => void }) {
   const [open, setOpen] = useState(false);
-  const [slug, setSlug] = useState("");
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<{ slug: string; name: string } | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const { suggestions } = useListingSuggestions(query);
+  const boxRef = useRef<HTMLDivElement>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setShowSuggestions(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!selected) {
+      setError("Search for your business and pick it from the suggestions.");
+      return;
+    }
     setBusy(true);
     setError(null);
     const res = await apiFetch<{ detail?: string; listing_slug?: string[] }>(
       "/owner/claim/",
-      { method: "POST", body: { listing_slug: slug.trim(), message } }
+      { method: "POST", body: { listing_slug: selected.slug, message } }
     );
     setBusy(false);
     if (!res.ok) {
-      setError(res.data?.detail ?? res.data?.listing_slug?.[0] ?? "Claim failed — check the slug.");
+      setError(res.data?.detail ?? res.data?.listing_slug?.[0] ?? "Claim failed — check the listing.");
       return;
     }
     setOpen(false);
-    setSlug("");
+    setQuery("");
+    setSelected(null);
     setMessage("");
     onClaimed();
   }
@@ -276,13 +294,47 @@ function ClaimBox({ onClaimed }: { onClaimed: () => void }) {
       onSubmit={submit}
       className="w-full rounded-xl border border-stone-200 bg-white p-4 sm:max-w-md"
     >
-      <input
-        required
-        value={slug}
-        onChange={(e) => setSlug(e.target.value)}
-        placeholder="Listing slug, e.g. ironhouse-fitness-osu"
-        className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
-      />
+      <div ref={boxRef} className="relative">
+        <input
+          required
+          value={selected ? selected.name : query}
+          onChange={(e) => {
+            setSelected(null);
+            setQuery(e.target.value);
+            setShowSuggestions(true);
+          }}
+          onFocus={() => setShowSuggestions(true)}
+          autoComplete="off"
+          placeholder="Search for your business by name…"
+          className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
+        />
+        {showSuggestions && !selected && suggestions.length > 0 && (
+          <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-stone-200 bg-white shadow-lg">
+            {suggestions.map((l) => (
+              <li key={l.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelected({ slug: l.slug, name: l.name });
+                    setShowSuggestions(false);
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-stone-50"
+                >
+                  <span className="text-lg">{l.category.icon}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-stone-800">
+                      {l.name}
+                    </span>
+                    <span className="block truncate text-xs text-stone-400">
+                      {l.area.name}, {l.area.region} Region
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
       <textarea
         rows={2}
         value={message}

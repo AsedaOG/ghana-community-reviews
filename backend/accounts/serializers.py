@@ -25,3 +25,17 @@ class ReviewerProfileSerializer(serializers.ModelSerializer):
 
     def get_badges(self, obj):
         return BadgeSerializer([rb.badge for rb in obj.badges.select_related("badge")], many=True).data
+
+
+class ReviewerLeaderboardSerializer(serializers.ModelSerializer):
+    """Public-facing top-reviewers ranking — no email, no moderation flags."""
+
+    badges = serializers.SerializerMethodField()
+    review_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = ReviewerProfile
+        fields = ["username", "reputation", "is_trusted", "review_count", "badges", "created_at"]
+
+    def get_badges(self, obj):
+        return BadgeSerializer([rb.badge for rb in obj.badges.select_related("badge")], many=True).data

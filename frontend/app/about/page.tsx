@@ -1,23 +1,20 @@
 export const metadata = { title: "About" };
 
-const PHASES = [
+const BADGES = [
   {
-    phase: "Phase 1 — Now",
-    title: "Free for everyone",
-    text: "A free platform focused on growth: building trust, coverage and an honest review culture across Ghana.",
-    active: true,
+    icon: "🌱",
+    name: "First Voice",
+    text: "Awarded the moment your first review is published.",
   },
   {
-    phase: "Phase 2",
-    title: "Business subscriptions",
-    text: "Paid tools for businesses: richer profiles, analytics and profile management.",
-    active: false,
+    icon: "🧭",
+    name: "Community Guide",
+    text: "Awarded after 50 published reviews.",
   },
   {
-    phase: "Phase 3",
-    title: "Market intelligence",
-    text: "Premium reports on rental markets, employer reputation and service quality trends.",
-    active: false,
+    icon: "🏅",
+    name: "Trusted Voice",
+    text: "Awarded after 100 published reviews.",
   },
 ];
 
@@ -90,25 +87,51 @@ export default function AboutPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="text-lg font-bold text-stone-900">Roadmap</h2>
-        <div className="mt-4 space-y-3">
-          {PHASES.map((p) => (
-            <div
-              key={p.phase}
-              className={`rounded-xl border p-5 ${
-                p.active
-                  ? "border-primary-500 bg-primary-50"
-                  : "border-stone-200 bg-white"
-              }`}
-            >
-              <p className={`text-xs font-bold uppercase tracking-wide ${p.active ? "text-primary-700" : "text-stone-400"}`}>
-                {p.phase}
-              </p>
-              <h3 className="mt-1 font-semibold text-stone-900">{p.title}</h3>
-              <p className="mt-1 text-sm text-stone-600">{p.text}</p>
+        <h2 className="text-lg font-bold text-stone-900">Reputation &amp; badges</h2>
+        <p className="mt-1 text-sm text-stone-500">
+          A quick guide to the numbers and icons you&apos;ll see next to a
+          reviewer&apos;s username. See how everyone ranks on the{" "}
+          <a href="/leaderboard" className="text-primary-700 hover:underline">
+            leaderboard
+          </a>
+          .
+        </p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-xl border border-stone-200 bg-white p-5">
+            <h3 className="font-semibold text-stone-900">⭐ Reputation points</h3>
+            <p className="mt-1 text-sm text-stone-600">
+              Every published review earns you <strong>10 reputation points</strong>.
+              It&apos;s a simple running total of how much you&apos;ve
+              contributed to the community — the more honest reviews you
+              share, the higher it climbs. It&apos;s shown on your reviewer
+              profile and used to rank the most active reviewers.
+            </p>
+          </div>
+          <div className="rounded-xl border border-stone-200 bg-white p-5">
+            <h3 className="font-semibold text-stone-900">🏷️ Badges</h3>
+            <p className="mt-1 text-sm text-stone-600">
+              Badges are awarded automatically as you publish reviews — no
+              application needed. They appear next to your username on every
+              review you write, so readers can see at a glance how active
+              you&apos;ve been.
+            </p>
+          </div>
+          {BADGES.map((b) => (
+            <div key={b.name} className="rounded-xl border border-stone-200 bg-white p-5">
+              <h3 className="font-semibold text-stone-900">
+                {b.icon} {b.name}
+              </h3>
+              <p className="mt-1 text-sm text-stone-600">{b.text}</p>
             </div>
           ))}
         </div>
+        <p className="mt-4 text-xs text-stone-400">
+          Badges are different from a review&apos;s{" "}
+          <strong>verification level</strong> (Community, Verified, Trusted) —
+          that&apos;s about how credible a single review is, checked by
+          admins; reputation and badges are about how active a reviewer has
+          been overall.
+        </p>
       </section>
     </div>
   );

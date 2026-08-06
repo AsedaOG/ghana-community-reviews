@@ -29,6 +29,9 @@ export default async function Header() {
               <SearchBar compact />
             </div>
             <nav className="hidden items-center gap-5 text-sm font-medium text-stone-600 md:flex">
+              <Link href="/leaderboard" className="hover:text-primary-700">
+                Leaderboard
+              </Link>
               <Link href="/about" className="hover:text-primary-700">
                 About
               </Link>

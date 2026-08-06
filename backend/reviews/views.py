@@ -1,17 +1,26 @@
+from django.db.models import Count, Q
 from rest_framework import mixins, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Evidence, Review, ReviewPhoto
-from .serializers import EvidenceSerializer, ReviewSerializer
+from accounts.models import ReviewerProfile
+
+from .models import Evidence, Review, ReviewPhoto, ReviewReply, ReviewVote
+from .permissions import IsReviewOwner
+from .serializers import EvidenceSerializer, ReviewReplySerializer, ReviewSerializer
 
 
 class ReviewViewSet(
     mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin, mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
     serializer_class = ReviewSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+    # No PUT: editing only ever sends the fields that changed (PATCH).
+    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
     filterset_fields = {
         "listing__slug": ["exact"],
         "reviewer__username": ["exact"],
@@ -20,11 +29,19 @@ class ReviewViewSet(
     }
     ordering_fields = ["created_at", "rating"]
 
+    def get_permissions(self):
+        if self.action in ("partial_update", "destroy"):
+            return [IsAuthenticated(), IsReviewOwner()]
+        return super().get_permissions()
+
     def get_queryset(self):
         return (
             Review.objects.filter(status=Review.Status.PUBLISHED)
             .select_related("listing", "reviewer", "owner_response")
-            .prefetch_related("photos", "reviewer__badges__badge", "evidence")
+            .prefetch_related(
+                "photos", "reviewer__badges__badge", "evidence",
+                "votes", "replies__reviewer",
+            )
         )
 
     def create(self, request, *args, **kwargs):
@@ -49,6 +66,46 @@ class ReviewViewSet(
         out = ReviewSerializer(review, context=self.get_serializer_context())
         return Response(out.data, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=["post"])
+    def vote(self, request, pk=None):
+        """Cast/change/clear an upvote or downvote. Voting the same value
+        again clears your vote."""
+        review = self.get_object()
+        value = request.data.get("value")
+        if value not in ("up", "down"):
+            return Response({"detail": "value must be \"up\" or \"down\"."}, status=400)
+        numeric = ReviewVote.Value.UP if value == "up" else ReviewVote.Value.DOWN
+
+        reviewer = getattr(request.user, "reviewer_profile", None)
+        if reviewer is None:
+            reviewer = ReviewerProfile.objects.create(user=request.user)
+        if reviewer.is_blocked:
+            return Response(
+                {"detail": "This account has been blocked by moderators."}, status=403
+            )
+
+        existing = ReviewVote.objects.filter(review=review, reviewer=reviewer).first()
+        if existing and existing.value == numeric:
+            existing.delete()
+            my_vote = None
+        elif existing:
+            existing.value = numeric
+            existing.save(update_fields=["value"])
+            my_vote = value
+        else:
+            ReviewVote.objects.create(review=review, reviewer=reviewer, value=numeric)
+            my_vote = value
+
+        counts = ReviewVote.objects.filter(review=review).aggregate(
+            upvotes=Count("id", filter=Q(value=ReviewVote.Value.UP)),
+            downvotes=Count("id", filter=Q(value=ReviewVote.Value.DOWN)),
+        )
+        return Response({
+            "upvotes": counts["upvotes"] or 0,
+            "downvotes": counts["downvotes"] or 0,
+            "my_vote": my_vote,
+        })
+
 
 class EvidenceViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     """Attach evidence to a review you already published."""
@@ -56,3 +113,14 @@ class EvidenceViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     queryset = Evidence.objects.all()
     serializer_class = EvidenceSerializer
     parser_classes = [MultiPartParser, FormParser]
+
+
+class ReviewReplyViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+    """Threaded replies to a review. Free accounts are capped at
+    ReviewReply.MAX_FREE_REPLIES_PER_REVIEW per review — enforced in
+    ReviewReplySerializer.create()."""
+
+    queryset = ReviewReply.objects.select_related("reviewer")
+    serializer_class = ReviewReplySerializer
+    filterset_fields = ["review"]
+    pagination_class = None

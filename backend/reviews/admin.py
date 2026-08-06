@@ -1,6 +1,14 @@
 from django.contrib import admin
 
-from .models import BusinessClaim, Evidence, OwnerResponse, Review, ReviewPhoto
+from .models import (
+    BusinessClaim,
+    Evidence,
+    OwnerResponse,
+    Review,
+    ReviewPhoto,
+    ReviewReply,
+    ReviewVote,
+)
 
 
 class ReviewPhotoInline(admin.TabularInline):
@@ -49,3 +57,15 @@ class BusinessClaimAdmin(admin.ModelAdmin):
 @admin.register(OwnerResponse)
 class OwnerResponseAdmin(admin.ModelAdmin):
     list_display = ["review", "claim", "created_at"]
+
+
+@admin.register(ReviewVote)
+class ReviewVoteAdmin(admin.ModelAdmin):
+    list_display = ["review", "reviewer", "value", "created_at"]
+    list_filter = ["value"]
+
+
+@admin.register(ReviewReply)
+class ReviewReplyAdmin(admin.ModelAdmin):
+    list_display = ["review", "reviewer", "created_at"]
+    search_fields = ["body", "reviewer__username"]

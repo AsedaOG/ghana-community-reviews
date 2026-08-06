@@ -2,7 +2,18 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from accounts.models import ReviewerProfile
+from billing.models import Subscription
 from core.models import Listing
+
+
+def is_paying_customer(user) -> bool:
+    """Whether `user` has an active subscription — the free/paid split used
+    to gate reply limits."""
+    if user is None or not getattr(user, "is_authenticated", False):
+        return False
+    return Subscription.objects.filter(
+        user=user, status=Subscription.Status.ACTIVE
+    ).exists()
 
 
 class Review(models.Model):
@@ -99,3 +110,43 @@ class OwnerResponse(models.Model):
 
     def __str__(self):
         return f"Response to review #{self.review_id}"
+
+
+class ReviewVote(models.Model):
+    """A reviewer's up/down vote on someone else's review ("I agree" /
+    "I disagree"). One vote per reviewer per review; casting the same value
+    again clears it."""
+
+    class Value(models.IntegerChoices):
+        UP = 1, "Upvote"
+        DOWN = -1, "Downvote"
+
+    review = models.ForeignKey(Review, related_name="votes", on_delete=models.CASCADE)
+    reviewer = models.ForeignKey(ReviewerProfile, related_name="review_votes", on_delete=models.CASCADE)
+    value = models.SmallIntegerField(choices=Value.choices)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("review", "reviewer")]
+
+    def __str__(self):
+        return f"{self.reviewer.username} {self.get_value_display()} on review #{self.review_id}"
+
+
+class ReviewReply(models.Model):
+    """A threaded reply to a review. Free (non-subscribed) reviewers may post
+    at most MAX_FREE_REPLIES_PER_REVIEW replies on any single review;
+    subscribers have no cap — see is_paying_customer()."""
+
+    MAX_FREE_REPLIES_PER_REVIEW = 4
+
+    review = models.ForeignKey(Review, related_name="replies", on_delete=models.CASCADE)
+    reviewer = models.ForeignKey(ReviewerProfile, related_name="review_replies", on_delete=models.CASCADE)
+    body = models.TextField(max_length=1000)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Reply by {self.reviewer.username} on review #{self.review_id}"

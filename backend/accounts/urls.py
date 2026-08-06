@@ -9,10 +9,11 @@ from .auth_views import (
     VerifyEmailView,
 )
 from .reviewer_auth_views import ReviewerMeView, ReviewerRegisterView
-from .views import BadgeListView
+from .views import BadgeListView, ReviewerLeaderboardView
 
 urlpatterns = [
     path("badges/", BadgeListView.as_view(), name="badges"),
+    path("reviewers/leaderboard/", ReviewerLeaderboardView.as_view(), name="reviewer-leaderboard"),
     # Auth — one login for every role, two sign-up paths.
     path("auth/login/", LoginView.as_view(), name="auth-login"),
     path("auth/logout/", LogoutView.as_view(), name="auth-logout"),

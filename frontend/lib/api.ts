@@ -37,6 +37,14 @@ export interface ReviewPhoto {
   caption: string;
 }
 
+export interface ReviewReply {
+  id: number;
+  review: number;
+  body: string;
+  reviewer: string;
+  created_at: string;
+}
+
 export interface Review {
   id: number;
   rating: number;
@@ -50,6 +58,12 @@ export interface Review {
   owner_response: { id: number; body: string; created_at: string } | null;
   listing: { name: string; slug: string };
   has_evidence: boolean;
+  replies: ReviewReply[];
+  upvotes: number;
+  downvotes: number;
+  my_vote: "up" | "down" | null;
+  can_reply_unlimited: boolean;
+  reply_limit: number;
 }
 
 export interface District {

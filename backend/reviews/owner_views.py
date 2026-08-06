@@ -34,7 +34,10 @@ class OwnerOverviewView(APIView):
                 status=Review.Status.PUBLISHED,
             )
             .select_related("listing", "reviewer", "owner_response")
-            .prefetch_related("photos", "reviewer__badges__badge", "evidence")
+            .prefetch_related(
+                "photos", "reviewer__badges__badge", "evidence",
+                "votes", "replies__reviewer",
+            )
             .order_by("-created_at")[:50]
         )
         return Response({

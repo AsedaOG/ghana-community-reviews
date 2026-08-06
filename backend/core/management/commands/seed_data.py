@@ -25,8 +25,8 @@ CATEGORIES = [
 
 BADGES = [
     ("First Voice", "first-voice", "Published a first review", "🌱", 1),
-    ("Community Guide", "community-guide", "Published 5 reviews", "🧭", 5),
-    ("Trusted Voice", "trusted-voice", "Published 10 reviews", "🏅", 10),
+    ("Community Guide", "community-guide", "Published 50 reviews", "🧭", 50),
+    ("Trusted Voice", "trusted-voice", "Published 100 reviews", "🏅", 100),
 ]
 
 # (name, category, region, district, area, address, description)
