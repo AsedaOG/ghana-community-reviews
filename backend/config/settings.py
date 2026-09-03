@@ -15,6 +15,23 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-insecure-key-change-m
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
+# The frontend origin(s) allowed to make cross-site POSTs (login, admin
+# actions) — required in production since browsers won't send the CSRF
+# cookie back otherwise. Comma-separated full origins, e.g.
+# "https://ghana-community-reviews.vercel.app".
+CSRF_TRUSTED_ORIGINS = [
+    o for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o
+]
+
+if not DEBUG:
+    # Render/Railway terminate TLS at a proxy and forward plain HTTP — trust
+    # their X-Forwarded-Proto header so Django knows the original request
+    # was HTTPS (otherwise SECURE_SSL_REDIRECT loops forever).
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -34,6 +51,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -101,13 +119,18 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# WhiteNoise serves collected static files (admin CSS/JS) directly from the
+# app process — no separate static host needed. Media (user uploads) is
+# local disk by default; switch to S3/R2 below for anything beyond a demo.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
+
 # Cloudflare R2 / AWS S3 media storage (Phase 1 default is local disk).
 # Set USE_S3=1 plus the AWS_* variables and install django-storages + boto3.
 if os.environ.get("USE_S3") == "1":
-    STORAGES = {
-        "default": {"BACKEND": "storages.backends.s3.S3Storage"},
-        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
-    }
+    STORAGES["default"] = {"BACKEND": "storages.backends.s3.S3Storage"}
     AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
     AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
     AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")

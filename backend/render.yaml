@@ -1,0 +1,52 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# In the Render dashboard: New > Blueprint > pick this repo, root "backend".
+# Env vars marked sync:false must be filled in manually in the dashboard
+# after the first deploy (never commit real secrets here).
+services:
+  - type: web
+    name: ghana-community-reviews-api
+    runtime: python
+    rootDir: backend
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput"
+    startCommand: "gunicorn config.wsgi --log-file -"
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: DJANGO_DEBUG
+        value: "0"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_ALLOWED_HOSTS
+        sync: false # e.g. ghana-community-reviews-api.onrender.com
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false # e.g. https://your-app.vercel.app
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false # same origin(s) as above, with scheme
+      - key: FRONTEND_URL
+        sync: false # e.g. https://your-app.vercel.app
+      - key: DATABASE_URL
+        sync: false # Supabase transaction pooler URL, port 6543
+      - key: DB_CONN_MAX_AGE
+        value: "600"
+      - key: EMAIL_BACKEND
+        value: "django.core.mail.backends.smtp.EmailBackend"
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: EMAIL_USE_TLS
+        value: "1"
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: PAYSTACK_PUBLIC_KEY
+        sync: false
+      - key: PAYMENT_CURRENCY
+        value: "GHS"
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false

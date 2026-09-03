@@ -9,6 +9,9 @@ requests>=2.31
 python-dotenv>=1.0
 # PostgreSQL driver (Supabase)
 psycopg[binary]>=3.1
+# Production WSGI server + static file serving
+gunicorn>=22.0
+whitenoise>=6.6
 # Optional: Cloudflare R2 / AWS S3 media storage
 # django-storages>=1.14
 # boto3>=1.34
