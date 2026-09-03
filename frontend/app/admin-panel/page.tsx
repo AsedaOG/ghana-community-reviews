@@ -41,10 +41,26 @@ interface FlaggedReview {
   listing: { name: string; slug: string };
 }
 
+interface PendingReport {
+  id: number;
+  review_id: number;
+  review_title: string;
+  review_body: string;
+  listing: string;
+  reviewer: string;
+  reviewer_id: number;
+  reviewer_strikes: number;
+  strikes_to_block: number;
+  reported_by: string;
+  reason: string;
+  created_at: string;
+}
+
 interface Queue {
   pending_claims: Claim[];
   unreviewed_evidence: EvidenceItem[];
   flagged_reviews: FlaggedReview[];
+  pending_reports: PendingReport[];
 }
 
 interface ReviewerRow {
@@ -54,6 +70,7 @@ interface ReviewerRow {
   review_count: number;
   is_trusted: boolean;
   is_blocked: boolean;
+  strikes: number;
   has_account: boolean;
 }
 
@@ -90,6 +107,17 @@ export default function AdminPanelPage() {
 
   async function moderateReview(id: number, action: "remove" | "restore") {
     await apiFetch(`/moderation/reviews/${id}/`, { method: "POST", body: { action } });
+    load();
+  }
+
+  async function decideReport(id: number, decision: "uphold" | "dismiss") {
+    if (
+      decision === "uphold" &&
+      !window.confirm("Uphold this report? It adds a strike to the reviewer's account.")
+    ) {
+      return;
+    }
+    await apiFetch(`/moderation/reports/${id}/`, { method: "POST", body: { decision } });
     load();
   }
 
@@ -213,6 +241,56 @@ export default function AdminPanelPage() {
                   </div>
                 </div>
                 {e.note && <p className="mt-1 text-xs text-stone-500">Note: {e.note}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Reported reviews */}
+      <section className="mt-10">
+        <h2 className="text-lg font-bold text-stone-900">
+          Reported reviews ({queue.pending_reports.length})
+        </h2>
+        <p className="mt-1 text-xs text-stone-500">
+          Upholding a report adds a strike to the reviewer&apos;s account.
+          Three strikes blocks them automatically — dismiss if the report
+          doesn&apos;t hold up.
+        </p>
+        {queue.pending_reports.length === 0 ? (
+          <p className="mt-2 text-sm text-stone-500">Nothing pending. 🎉</p>
+        ) : (
+          <div className="mt-3 space-y-3">
+            {queue.pending_reports.map((r) => (
+              <div key={r.id} className="rounded-xl border border-stone-200 bg-white p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm text-stone-700">
+                    <span className="font-semibold">{r.listing}</span> — “{r.review_title}” by{" "}
+                    <span className="font-semibold">{r.reviewer}</span>
+                    <span className="ml-2 text-xs text-stone-400">
+                      {r.reviewer_strikes} of {r.strikes_to_block} strikes so far
+                    </span>
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => decideReport(r.id, "uphold")}
+                      className="rounded-lg border border-clay-500 px-3 py-1.5 text-xs font-semibold text-clay-500 hover:bg-clay-500/10"
+                    >
+                      Uphold → strike
+                    </button>
+                    <button
+                      onClick={() => decideReport(r.id, "dismiss")}
+                      className="rounded-lg border border-stone-300 px-3 py-1.5 text-xs font-semibold text-stone-600 hover:bg-stone-50"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+                <p className="mt-2 text-sm text-stone-600">{r.review_body}</p>
+                <p className="mt-2 text-xs text-stone-400">
+                  Reported by {r.reported_by}
+                  {r.reason && <> — “{r.reason}”</>}
+                </p>
               </div>
             ))}
           </div>
@@ -638,6 +716,9 @@ function ReviewerModeration() {
                 <span className="ml-2 text-xs text-stone-400">
                   {r.review_count} reviews · {r.reputation} rep
                   {r.is_trusted && " · 🏅 trusted"}
+                  {r.strikes > 0 && (
+                    <span className="text-clay-500"> · {r.strikes} strike{r.strikes === 1 ? "" : "s"}</span>
+                  )}
                   {r.has_account && " · has account"}
                 </span>
               </span>

@@ -1,13 +1,13 @@
-from django.db.models import Count, Q
+from django.db.models import Count, Prefetch, Q
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from accounts.models import ReviewerProfile
+from accounts.models import ReviewerBadge, ReviewerProfile
 
-from .models import Evidence, Review, ReviewPhoto, ReviewReply, ReviewVote
+from .models import Evidence, Report, Review, ReviewPhoto, ReviewReply, ReviewVote
 from .permissions import IsReviewOwner
 from .serializers import EvidenceSerializer, ReviewReplySerializer, ReviewSerializer
 
@@ -35,12 +35,23 @@ class ReviewViewSet(
         return super().get_permissions()
 
     def get_queryset(self):
+        # Each entry in prefetch_related() is one extra DB round trip — on a
+        # remote DB that's real latency, not free, so badges/replies are
+        # collapsed into a single query each via Prefetch(select_related=...)
+        # instead of the 2-query "a__b__c" string form.
         return (
             Review.objects.filter(status=Review.Status.PUBLISHED)
             .select_related("listing", "reviewer", "owner_response")
             .prefetch_related(
-                "photos", "reviewer__badges__badge", "evidence",
-                "votes", "replies__reviewer",
+                "photos", "evidence", "votes", "reports",
+                Prefetch(
+                    "reviewer__badges",
+                    queryset=ReviewerBadge.objects.select_related("badge"),
+                ),
+                Prefetch(
+                    "replies",
+                    queryset=ReviewReply.objects.select_related("reviewer"),
+                ),
             )
         )
 
@@ -105,6 +116,36 @@ class ReviewViewSet(
             "downvotes": counts["downvotes"] or 0,
             "my_vote": my_vote,
         })
+
+    @action(detail=True, methods=["post"])
+    def report(self, request, pk=None):
+        """Flag a review as abusive or false for staff to review. Filing a
+        report does not by itself add a strike — a moderator has to uphold
+        it first (see ReportDecisionView)."""
+        review = self.get_object()
+
+        reviewer = getattr(request.user, "reviewer_profile", None)
+        if reviewer is None:
+            reviewer = ReviewerProfile.objects.create(user=request.user)
+        if reviewer.is_blocked:
+            return Response(
+                {"detail": "This account has been blocked by moderators."}, status=403
+            )
+        if review.reviewer_id == reviewer.id:
+            return Response({"detail": "You can't report your own review."}, status=400)
+        if Report.objects.filter(review=review, reported_by=reviewer).exists():
+            return Response({"detail": "You already reported this review."}, status=400)
+
+        Report.objects.create(
+            review=review,
+            reported_by=reviewer,
+            reason=(request.data.get("reason") or "").strip()[:255],
+        )
+
+        return Response(
+            {"detail": "Report received. Our moderators will review it.", "reported_by_me": True},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class EvidenceViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):

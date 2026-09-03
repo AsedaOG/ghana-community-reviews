@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Logo from "./Logo";
 
 const POINTS = [
   { icon: "🎭", text: "Reviews are published under a generated username — never your name or email." },
@@ -22,7 +23,7 @@ export default function AuthLayout({
       {/* Pitch */}
       <div className="hidden flex-col justify-center bg-gradient-to-b from-primary-800 to-primary-700 px-10 py-16 text-white lg:flex">
         <p className="text-sm font-semibold uppercase tracking-widest text-gold-400">
-          Akwaaba 👋
+          Akwaaba 🙏🏾
         </p>
         <h2 className="mt-3 max-w-md text-4xl font-extrabold leading-tight">
           Know before you rent, work, learn or train.
@@ -45,19 +46,7 @@ export default function AuthLayout({
       {/* Form */}
       <div className="flex items-center justify-center px-4 py-16">
         <div className="w-full max-w-sm">
-          <Link href="/login" className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600 text-lg font-bold text-white">
-              G
-            </span>
-            <span>
-              <span className="block text-sm font-bold leading-tight text-primary-800">
-                Ghana Community
-              </span>
-              <span className="block text-sm font-bold leading-tight text-gold-600">
-                Reviews
-              </span>
-            </span>
-          </Link>
+          <Logo href="/login" />
           <h1 className="mt-8 text-2xl font-bold text-stone-900">{title}</h1>
           <p className="mt-1 text-sm text-stone-500">{subtitle}</p>
           <div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">

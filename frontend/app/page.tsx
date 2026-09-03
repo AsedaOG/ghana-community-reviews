@@ -24,8 +24,8 @@ const LEVELS = [
 
 export default async function HomePage() {
   const [categories, recent] = await Promise.all([
-    apiGet<Category[]>("/categories/"),
-    apiGet<Paginated<Review>>("/reviews/?ordering=-created_at"),
+    apiGet<Category[]>("/categories/", 300), // rarely changes — cache 5min
+    apiGet<Paginated<Review>>("/reviews/?ordering=-created_at&page_size=6"),
   ]);
 
   return (
@@ -34,7 +34,7 @@ export default async function HomePage() {
       <section className="bg-gradient-to-b from-primary-800 to-primary-700 text-white">
         <div className="mx-auto max-w-6xl px-4 py-16 text-center sm:py-20">
           <p className="text-sm font-semibold uppercase tracking-widest text-gold-400">
-            Akwaaba 👋
+            Akwaaba 🙏🏾
           </p>
           <h1 className="mx-auto mt-3 max-w-2xl text-3xl font-extrabold leading-tight sm:text-5xl">
             Know before you rent, work, learn or train.

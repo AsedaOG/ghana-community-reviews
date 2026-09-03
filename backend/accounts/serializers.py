@@ -14,14 +14,18 @@ class ReviewerProfileSerializer(serializers.ModelSerializer):
     review_count = serializers.IntegerField(source="reviews.count", read_only=True)
 
     has_account = serializers.SerializerMethodField()
+    strikes_to_block = serializers.SerializerMethodField()
 
     class Meta:
         model = ReviewerProfile
-        fields = ["username", "reputation", "is_trusted", "is_blocked", "created_at",
-                  "badges", "review_count", "has_account"]
+        fields = ["username", "reputation", "is_trusted", "is_blocked", "strikes",
+                  "strikes_to_block", "created_at", "badges", "review_count", "has_account"]
 
     def get_has_account(self, obj):
         return obj.user_id is not None
+
+    def get_strikes_to_block(self, obj):
+        return ReviewerProfile.STRIKES_TO_BLOCK
 
     def get_badges(self, obj):
         return BadgeSerializer([rb.badge for rb in obj.badges.select_related("badge")], many=True).data
@@ -38,4 +42,6 @@ class ReviewerLeaderboardSerializer(serializers.ModelSerializer):
         fields = ["username", "reputation", "is_trusted", "review_count", "badges", "created_at"]
 
     def get_badges(self, obj):
-        return BadgeSerializer([rb.badge for rb in obj.badges.select_related("badge")], many=True).data
+        # .all() — this queryset is prefetched (Prefetch with
+        # select_related), so .select_related() here would re-query per row.
+        return BadgeSerializer([rb.badge for rb in obj.badges.all()], many=True).data

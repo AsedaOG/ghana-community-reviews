@@ -1,14 +1,15 @@
 import Link from "next/link";
+import Logo from "./Logo";
 
 export default function Footer() {
   return (
     <footer className="mt-16 border-t border-stone-200 bg-white">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-3">
         <div>
-          <p className="text-sm font-bold text-primary-800">Ghana Community Reviews</p>
-          <p className="mt-2 text-sm text-stone-500">
-            Helping Ghanaians make better decisions through authentic, anonymous
-            community reviews.
+          <Logo />
+          <p className="mt-3 text-sm text-stone-500">
+            Know before you rent, work, learn or train — honest, anonymous
+            reviews written by Ghanaians, for Ghanaians.
           </p>
         </div>
         <div>

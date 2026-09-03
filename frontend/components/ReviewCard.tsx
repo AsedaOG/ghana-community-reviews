@@ -2,10 +2,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Review, ReviewReply } from "@/lib/api";
 import { mediaUrl } from "@/lib/api";
 import { apiFetch, getSession } from "@/lib/client-session";
+import type { Session } from "@/lib/session";
 import RatingStars from "./RatingStars";
 import VerificationBadge from "./VerificationBadge";
 
@@ -16,7 +17,8 @@ export default function ReviewCard({
   review: Review;
   showListing?: boolean;
 }) {
-  const session = getSession();
+  const [session, setSession] = useState<Session | null>(null);
+  useEffect(() => setSession(getSession()), []);
   const isOwner = !!session && session.username === review.reviewer;
 
   const [deleted, setDeleted] = useState(false);
@@ -37,6 +39,8 @@ export default function ReviewCard({
   const [myVote, setMyVote] = useState(review.my_vote);
   const [voting, setVoting] = useState(false);
   const [replies, setReplies] = useState<ReviewReply[]>(review.replies);
+  const [reported, setReported] = useState(review.reported_by_me);
+  const [reporting, setReporting] = useState(false);
 
   async function saveEdit(e: React.FormEvent) {
     e.preventDefault();
@@ -95,6 +99,25 @@ export default function ReviewCard({
     setVoting(false);
   }
 
+  async function report() {
+    if (!session || reporting || reported) return;
+    if (!window.confirm("Report this review as abusive or false? Our moderators will take a look.")) {
+      return;
+    }
+    setReporting(true);
+    const res = await apiFetch<{ detail?: string }>(`/reviews/${review.id}/report/`, {
+      method: "POST",
+    });
+    setReporting(false);
+    if (res.ok) {
+      setReported(true);
+    } else {
+      window.alert(
+        (res.data as { detail?: string } | null)?.detail ?? "Could not submit the report."
+      );
+    }
+  }
+
   const myReplyCount = session
     ? replies.filter((r) => r.reviewer === session.username).length
     : 0;
@@ -103,7 +126,7 @@ export default function ReviewCard({
   if (deleted) return null;
 
   return (
-    <article className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
+    <article className="rounded border border-stone-200 border-l-4 border-l-primary-600 bg-white p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-sm font-bold text-primary-700">
@@ -238,7 +261,7 @@ export default function ReviewCard({
       )}
 
       {review.owner_response && (
-        <div className="mt-4 rounded-lg border-l-4 border-gold-400 bg-gold-100/50 p-3">
+        <div className="mt-4 rounded border-l-4 border-gold-500 bg-gold-100/50 p-3">
           <p className="text-xs font-bold uppercase tracking-wide text-gold-600">
             Response from the business
           </p>
@@ -271,6 +294,21 @@ export default function ReviewCard({
         >
           👎 {downvotes}
         </button>
+        {!isOwner && (
+          <button
+            type="button"
+            disabled={!session || reporting || reported}
+            onClick={report}
+            title={session ? "Report this review" : "Log in to report"}
+            className={`ml-auto flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition disabled:cursor-not-allowed ${
+              reported
+                ? "text-clay-500 opacity-70"
+                : "text-stone-400 hover:bg-stone-100 hover:text-clay-500 disabled:opacity-50"
+            }`}
+          >
+            🚩 {reported ? "Reported" : "Report"}
+          </button>
+        )}
       </div>
 
       <ReviewReplies

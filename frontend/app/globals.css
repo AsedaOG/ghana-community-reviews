@@ -1,21 +1,39 @@
 @import "tailwindcss";
 
 @theme {
-  /* Ghana-inspired palette: forest green primary, gold accent, warm neutrals */
-  --color-primary-50: #f0f7f2;
-  --color-primary-100: #d9ebde;
-  --color-primary-500: #1d7a46;
-  --color-primary-600: #166437;
-  --color-primary-700: #114f2c;
-  --color-primary-800: #0d3f23;
-  --color-primary-900: #092e1a;
-  --color-gold-100: #fdf3d7;
-  --color-gold-400: #f0c04a;
-  --color-gold-500: #e3ab26;
-  --color-gold-600: #c08f14;
-  --color-clay-500: #ce1126;
+  /* Ghana Community Reviews brand — "The Star Gate", v1.0 */
+  /* Greens: Canopy (darkest/grounds) → Grove (hover/mid) → Palm (actions) */
+  --color-primary-50: #edf2ee;
+  --color-primary-100: #d8e4db;
+  --color-primary-500: #4c8a5b;
+  --color-primary-600: #30633b; /* Palm — primary buttons, links */
+  --color-primary-700: #244c2e; /* Grove — hover states */
+  --color-primary-800: #1d3e26; /* Canopy — hero grounds, darkest surfaces */
+  --color-primary-900: #142b1a;
+
+  /* Golds: Harmattan (on dark) → Gold Coast (large/non-text) → Gold Deep (small text, AA) */
+  --color-gold-100: #f7edd4;
+  --color-gold-400: #e9c260; /* Harmattan */
+  --color-gold-500: #b99135; /* Gold Coast */
+  --color-gold-600: #8f7029; /* Gold Deep */
+
+  /* Clay Red — reserved for 1–2 star ratings and safety flags only */
+  --color-clay-500: #8c3a2b;
+
+  --font-display: var(--font-jakarta), "Segoe UI", system-ui, sans-serif;
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 body {
   @apply bg-stone-50 text-stone-800 antialiased;
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.025em;
 }

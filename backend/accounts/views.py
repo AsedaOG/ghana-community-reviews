@@ -1,7 +1,7 @@
-from django.db.models import Count, Q
+from django.db.models import Count, Prefetch, Q
 from rest_framework.generics import ListAPIView
 
-from .models import Badge, ReviewerProfile
+from .models import Badge, ReviewerBadge, ReviewerProfile
 from .serializers import BadgeSerializer, ReviewerLeaderboardSerializer
 
 
@@ -26,6 +26,8 @@ class ReviewerLeaderboardView(ListAPIView):
                 )
             )
             .filter(review_count__gt=0)
-            .prefetch_related("badges__badge")
+            .prefetch_related(
+                Prefetch("badges", queryset=ReviewerBadge.objects.select_related("badge"))
+            )
             .order_by("-reputation", "-review_count")[:50]
         )

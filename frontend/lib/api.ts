@@ -1,6 +1,9 @@
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000/api";
 
+/** Empty when Google sign-in isn't configured — callers should hide the button. */
+export const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+
 export interface Category {
   id: number;
   name: string;
@@ -62,6 +65,7 @@ export interface Review {
   upvotes: number;
   downvotes: number;
   my_vote: "up" | "down" | null;
+  reported_by_me: boolean;
   can_reply_unlimited: boolean;
   reply_limit: number;
 }

@@ -1,6 +1,13 @@
 from django.contrib import admin
 
-from .models import Badge, EmailVerificationToken, OwnerAccount, ReviewerBadge, ReviewerProfile
+from .models import (
+    Badge,
+    EmailVerificationToken,
+    OwnerAccount,
+    PasswordResetToken,
+    ReviewerBadge,
+    ReviewerProfile,
+)
 
 
 @admin.register(OwnerAccount)
@@ -15,9 +22,15 @@ class EmailVerificationTokenAdmin(admin.ModelAdmin):
     readonly_fields = ["token"]
 
 
+@admin.register(PasswordResetToken)
+class PasswordResetTokenAdmin(admin.ModelAdmin):
+    list_display = ["user", "created_at", "used_at"]
+    readonly_fields = ["token"]
+
+
 @admin.register(ReviewerProfile)
 class ReviewerProfileAdmin(admin.ModelAdmin):
-    list_display = ["username", "reputation", "is_trusted", "is_blocked", "created_at"]
+    list_display = ["username", "reputation", "is_trusted", "strikes", "is_blocked", "created_at"]
     list_filter = ["is_trusted", "is_blocked"]
     search_fields = ["username"]
     readonly_fields = ["token"]

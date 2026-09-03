@@ -7,6 +7,7 @@ import { API_URL } from "@/lib/api";
 import { setSession } from "@/lib/client-session";
 import { homePathFor, type Session } from "@/lib/session";
 import AuthLayout from "@/components/AuthLayout";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 
 type Role = "reviewer" | "business";
 
@@ -186,6 +187,12 @@ function RegisterForm() {
               : "Create business account"}
         </button>
       </form>
+      <div className="my-5 flex items-center gap-3 text-xs text-stone-400">
+        <span className="h-px flex-1 bg-stone-200" />
+        or
+        <span className="h-px flex-1 bg-stone-200" />
+      </div>
+      <GoogleSignInButton role={role} next={next} />
       <p className="mt-5 text-center text-sm text-stone-500">
         Already have an account?{" "}
         <Link

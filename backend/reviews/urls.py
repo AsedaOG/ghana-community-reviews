@@ -5,6 +5,7 @@ from .moderation_views import (
     ClaimDecisionView,
     EvidenceDecisionView,
     ModerationQueueView,
+    ReportDecisionView,
     ReviewerBlockView,
     ReviewerListView,
     ReviewModerationView,
@@ -31,6 +32,7 @@ urlpatterns = router.urls + [
     path("moderation/claims/<int:pk>/", ClaimDecisionView.as_view(), name="moderation-claim"),
     path("moderation/evidence/<int:pk>/", EvidenceDecisionView.as_view(), name="moderation-evidence"),
     path("moderation/reviews/<int:pk>/", ReviewModerationView.as_view(), name="moderation-review"),
+    path("moderation/reports/<int:pk>/", ReportDecisionView.as_view(), name="moderation-report"),
     path("moderation/reviewers/", ReviewerListView.as_view(), name="moderation-reviewers"),
     path("moderation/reviewers/<int:pk>/", ReviewerBlockView.as_view(), name="moderation-reviewer-block"),
 ]

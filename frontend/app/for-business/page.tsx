@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PRICING_ENABLED } from "@/lib/features";
 
 export const metadata = { title: "For Business" };
 
@@ -18,12 +19,17 @@ export default function ForBusinessPage() {
       <p className="mt-2 max-w-2xl text-sm text-stone-600">
         Reviewers stay anonymous, but you don&apos;t have to stay silent. Create
         a business account to claim your profile, respond publicly to reviews
-        and manage your information. Core features are free; optional
-        subscriptions add profile tools — see{" "}
-        <Link href="/pricing" className="font-medium text-primary-700 hover:underline">
-          pricing
-        </Link>
-        .
+        and manage your information. Core features are free.
+        {PRICING_ENABLED && (
+          <>
+            {" "}
+            Optional subscriptions add profile tools — see{" "}
+            <Link href="/pricing" className="font-medium text-primary-700 hover:underline">
+              pricing
+            </Link>
+            .
+          </>
+        )}
       </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-4">

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/client-session";
+import { PRICING_ENABLED } from "@/lib/features";
 
 interface Plan {
   name: string;
@@ -26,6 +27,7 @@ export default function PricingPage() {
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!PRICING_ENABLED) return;
     (async () => {
       const [p, r] = await Promise.all([
         apiFetch<Plan[]>("/billing/plans/"),
@@ -52,6 +54,19 @@ export default function PricingPage() {
     setNotice(
       res.data?.detail ??
         "Purchase recorded (sandbox). Download it from your dashboard."
+    );
+  }
+
+  if (!PRICING_ENABLED) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-16 text-center">
+        <h1 className="text-2xl font-bold text-stone-900">Pricing</h1>
+        <p className="mt-3 text-sm text-stone-600">
+          Reading and writing reviews is <strong>free, forever</strong>.
+          Business subscriptions and premium reports aren&apos;t available yet
+          — check back soon.
+        </p>
+      </div>
     );
   }
 

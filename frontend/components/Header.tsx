@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { getServerSession } from "@/lib/server-api";
+import { PRICING_ENABLED } from "@/lib/features";
+import Logo from "./Logo";
 import SearchBar from "./SearchBar";
 import UserMenu from "./UserMenu";
 
@@ -9,17 +11,12 @@ export default async function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-stone-200 bg-white/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
-        <Link href={session ? "/" : "/login"} className="flex shrink-0 items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600 text-lg font-bold text-white">
-            G
+        <Link href={session ? "/" : "/login"} className="flex shrink-0 items-center" aria-label="Ghana Community Reviews home">
+          <span className="sm:hidden">
+            <Logo iconOnly />
           </span>
           <span className="hidden sm:block">
-            <span className="block text-sm font-bold leading-tight text-primary-800">
-              Ghana Community
-            </span>
-            <span className="block text-sm font-bold leading-tight text-gold-600">
-              Reviews
-            </span>
+            <Logo />
           </span>
         </Link>
 
@@ -35,9 +32,11 @@ export default async function Header() {
               <Link href="/about" className="hover:text-primary-700">
                 About
               </Link>
-              <Link href="/pricing" className="hover:text-primary-700">
-                Pricing
-              </Link>
+              {PRICING_ENABLED && (
+                <Link href="/pricing" className="hover:text-primary-700">
+                  Pricing
+                </Link>
+              )}
             </nav>
             <UserMenu session={session} />
           </>

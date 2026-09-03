@@ -3,8 +3,13 @@ import os
 from pathlib import Path
 
 import dj_database_url
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Loads backend/.env into the process environment (values already exported in
+# the shell take precedence — load_dotenv never overwrites an existing var).
+load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-insecure-key-change-me")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
@@ -58,12 +63,25 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 # PostgreSQL in production via DATABASE_URL; SQLite for zero-config local dev.
+# Keep persistent connections on (conn_max_age) — a fresh TLS + auth
+# handshake to a remote Postgres host costs over a second, so opening one
+# per request makes every page feel slow. If DATABASE_URL points at a
+# connection pooler, use its transaction-pooling port (e.g. Supabase's is
+# 6543, not the session pooler's 5432) — that mode supports far more
+# concurrent connections, so a threaded dev server reusing one persistent
+# connection per thread won't exhaust it the way a small session-mode pool
+# would.
 DATABASES = {
     "default": dj_database_url.config(
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
+        conn_max_age=int(os.environ.get("DB_CONN_MAX_AGE", "600")),
     )
 }
+if DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
+    # Required when the connection goes through pgbouncer/Supabase in
+    # transaction-pooling mode — named server-side cursors don't survive a
+    # pooled connection being handed to a different backend mid-transaction.
+    DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -110,7 +128,7 @@ REST_FRAMEWORK = {
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.OrderingFilter",
     ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_PAGINATION_CLASS": "core.pagination.SizeControlledPagination",
     "PAGE_SIZE": 20,
     "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.AnonRateThrottle"],
     "DEFAULT_THROTTLE_RATES": {"anon": "120/hour"},
@@ -143,3 +161,8 @@ PAYSTACK_SECRET_KEY = os.environ.get("PAYSTACK_SECRET_KEY", "")
 PAYSTACK_PUBLIC_KEY = os.environ.get("PAYSTACK_PUBLIC_KEY", "")
 PAYSTACK_BASE_URL = os.environ.get("PAYSTACK_BASE_URL", "https://api.paystack.co")
 PAYMENT_CURRENCY = os.environ.get("PAYMENT_CURRENCY", "GHS")
+
+# ── Sign in with Google ────────────────────────────────────────────────────
+# OAuth 2.0 Client ID from console.cloud.google.com (Web application type).
+# Leave empty to keep the "Continue with Google" button disabled everywhere.
+GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", "")

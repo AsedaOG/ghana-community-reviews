@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Paginated, Review } from "@/lib/api";
-import { apiFetch } from "@/lib/client-session";
+import { apiFetch, clearSession } from "@/lib/client-session";
 import ReviewCard from "@/components/ReviewCard";
 
 interface ReviewerProfile {
@@ -11,6 +12,8 @@ interface ReviewerProfile {
   reputation: number;
   is_trusted: boolean;
   is_blocked: boolean;
+  strikes: number;
+  strikes_to_block: number;
   created_at: string;
   badges: { name: string; slug: string; description: string; icon: string }[];
   review_count: number;
@@ -18,6 +21,7 @@ interface ReviewerProfile {
 }
 
 export default function ReviewerProfilePage() {
+  const router = useRouter();
   const [profile, setProfile] = useState<ReviewerProfile | null>(null);
   const [reviews, setReviews] = useState<Review[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +29,13 @@ export default function ReviewerProfilePage() {
   useEffect(() => {
     (async () => {
       const res = await apiFetch<ReviewerProfile>("/reviewer/me/");
+      if (res.status === 401) {
+        // Session token is stale (e.g. revoked by a password change) —
+        // the API is fine, this account just needs to sign in again.
+        clearSession();
+        router.replace("/login?next=/reviewer/profile");
+        return;
+      }
       if (!res.ok || !res.data) {
         setError("Could not load your profile. Is the API running?");
         return;
@@ -67,11 +78,22 @@ export default function ReviewerProfilePage() {
           </div>
         </div>
 
-        {profile.is_blocked && (
-          <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-            🚫 This account has been blocked by moderators — new reviews are
-            disabled.
+        {profile.is_blocked ? (
+          <p className="mt-4 rounded-lg bg-clay-500/10 px-3 py-2 text-sm text-clay-500">
+            🚫{" "}
+            {profile.strikes >= profile.strikes_to_block
+              ? `This account was blocked automatically after ${profile.strikes} reported reviews.`
+              : "This account has been blocked by moderators."}{" "}
+            New reviews are disabled.
           </p>
+        ) : (
+          profile.strikes > 0 && (
+            <p className="mt-4 rounded-lg bg-clay-500/10 px-3 py-2 text-sm text-clay-500">
+              ⚠️ {profile.strikes} of {profile.strikes_to_block} warnings. A
+              reported review adds a strike — reaching {profile.strikes_to_block}{" "}
+              blocks your account automatically.
+            </p>
+          )
         )}
 
         <div className="mt-5 grid grid-cols-3 gap-3 text-center">

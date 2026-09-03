@@ -133,6 +133,39 @@ class ReviewVote(models.Model):
         return f"{self.reviewer.username} {self.get_value_display()} on review #{self.review_id}"
 
 
+class Report(models.Model):
+    """A reviewer flagging someone else's review as abusive or false.
+    Reports sit pending until a staff member decides them — upholding one
+    adds a strike to the review's author (see ReviewerProfile.strikes),
+    and three strikes blocks the account automatically. Filing a report
+    never blocks anyone by itself."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        UPHELD = "upheld", "Upheld"
+        DISMISSED = "dismissed", "Dismissed"
+
+    review = models.ForeignKey(Review, related_name="reports", on_delete=models.CASCADE)
+    reported_by = models.ForeignKey(
+        ReviewerProfile, related_name="reports_filed", on_delete=models.CASCADE
+    )
+    reason = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    decided_by = models.ForeignKey(
+        "auth.User", related_name="report_decisions", on_delete=models.SET_NULL,
+        null=True, blank=True,
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("review", "reported_by")]
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Report on review #{self.review_id} by {self.reported_by.username} ({self.status})"
+
+
 class ReviewReply(models.Model):
     """A threaded reply to a review. Free (non-subscribed) reviewers may post
     at most MAX_FREE_REPLIES_PER_REVIEW replies on any single review;

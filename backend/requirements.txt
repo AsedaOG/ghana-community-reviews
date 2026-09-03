@@ -4,8 +4,11 @@ django-cors-headers>=4.3
 django-filter>=24.2
 dj-database-url>=2.1
 Pillow>=10.3
-# Optional: PostgreSQL driver (uncomment when using DATABASE_URL=postgres://...)
-# psycopg[binary]>=3.1
+google-auth>=2.29
+requests>=2.31
+python-dotenv>=1.0
+# PostgreSQL driver (Supabase)
+psycopg[binary]>=3.1
 # Optional: Cloudflare R2 / AWS S3 media storage
 # django-storages>=1.14
 # boto3>=1.34

@@ -135,6 +135,18 @@ class Listing(models.Model):
         ordering = ["name"]
 
     def save(self, *args, **kwargs):
+        if self.name:
+            name = self.name.strip()
+            if name.isupper():
+                # Whole-name SHOUTING is someone typing with caps lock on,
+                # not a run of genuine acronyms — normalize the lot.
+                words = [w.capitalize() for w in name.split(" ")]
+            else:
+                # Otherwise just capitalize each word's first letter without
+                # touching the rest — str.title() mangles real acronyms
+                # ("JHS" -> "Jhs") and possessives ("Mary's" -> "Mary'S").
+                words = [w[:1].upper() + w[1:] if w else w for w in name.split(" ")]
+            self.name = " ".join(words)
         if not self.slug:
             base = slugify(f"{self.name}-{self.area.name}")
             slug = base

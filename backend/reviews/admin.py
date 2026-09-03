@@ -4,6 +4,7 @@ from .models import (
     BusinessClaim,
     Evidence,
     OwnerResponse,
+    Report,
     Review,
     ReviewPhoto,
     ReviewReply,
@@ -69,3 +70,41 @@ class ReviewVoteAdmin(admin.ModelAdmin):
 class ReviewReplyAdmin(admin.ModelAdmin):
     list_display = ["review", "reviewer", "created_at"]
     search_fields = ["body", "reviewer__username"]
+
+
+@admin.register(Report)
+class ReportAdmin(admin.ModelAdmin):
+    list_display = ["review", "reported_by", "status", "reason", "created_at"]
+    list_filter = ["status"]
+    search_fields = ["review__title", "reported_by__username", "reason"]
+    actions = ["uphold", "dismiss"]
+
+    def _decide(self, request, queryset, new_status):
+        from django.utils import timezone
+
+        for report in queryset.filter(status=Report.Status.PENDING).select_related(
+            "review__reviewer__user"
+        ):
+            report.status = new_status
+            report.decided_by = request.user
+            report.decided_at = timezone.now()
+            report.save(update_fields=["status", "decided_by", "decided_at"])
+            if new_status == Report.Status.UPHELD:
+                author = report.review.reviewer
+                author.strikes += 1
+                update_fields = ["strikes"]
+                if author.strikes >= author.STRIKES_TO_BLOCK and not author.is_blocked:
+                    author.is_blocked = True
+                    update_fields.append("is_blocked")
+                    if author.user:
+                        author.user.is_active = False
+                        author.user.save(update_fields=["is_active"])
+                author.save(update_fields=update_fields)
+
+    @admin.action(description="Uphold report — adds a strike")
+    def uphold(self, request, queryset):
+        self._decide(request, queryset, Report.Status.UPHELD)
+
+    @admin.action(description="Dismiss report — no strike")
+    def dismiss(self, request, queryset):
+        self._decide(request, queryset, Report.Status.DISMISSED)

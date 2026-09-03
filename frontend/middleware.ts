@@ -3,7 +3,14 @@ import type { NextRequest } from "next/server";
 import { SESSION_COOKIE } from "@/lib/session";
 
 /** Reachable without signing in. Everything else redirects to /login. */
-const PUBLIC_PATHS = ["/login", "/register", "/business/verify", "/about"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/register",
+  "/business/verify",
+  "/about",
+  "/forgot-password",
+  "/reset-password",
+];
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -34,5 +41,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon|apple-icon).*)"],
 };

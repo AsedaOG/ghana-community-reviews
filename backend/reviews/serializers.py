@@ -76,6 +76,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     upvotes = serializers.SerializerMethodField()
     downvotes = serializers.SerializerMethodField()
     my_vote = serializers.SerializerMethodField()
+    reported_by_me = serializers.SerializerMethodField()
     can_reply_unlimited = serializers.SerializerMethodField()
     reply_limit = serializers.SerializerMethodField()
 
@@ -85,7 +86,7 @@ class ReviewSerializer(serializers.ModelSerializer):
             "id", "rating", "title", "body", "verification_level", "created_at",
             "reviewer", "reviewer_badges", "photos", "owner_response",
             "listing", "listing_slug", "has_evidence",
-            "replies", "upvotes", "downvotes", "my_vote",
+            "replies", "upvotes", "downvotes", "my_vote", "reported_by_me",
             "can_reply_unlimited", "reply_limit",
         ]
         read_only_fields = ["verification_level", "created_at"]
@@ -94,13 +95,17 @@ class ReviewSerializer(serializers.ModelSerializer):
         return {"name": obj.listing.name, "slug": obj.listing.slug}
 
     def get_reviewer_badges(self, obj):
+        # .all() (not .select_related()) so this reads from the queryset's
+        # prefetch cache instead of firing a fresh query per review.
         return [
             {"name": rb.badge.name, "icon": rb.badge.icon}
-            for rb in obj.reviewer.badges.select_related("badge")
+            for rb in obj.reviewer.badges.all()
         ]
 
     def get_has_evidence(self, obj):
-        return obj.evidence.exists()
+        # .exists() always hits the DB even when evidence was prefetched —
+        # check the cached list instead.
+        return bool(obj.evidence.all())
 
     def get_upvotes(self, obj):
         return sum(1 for v in obj.votes.all() if v.value == ReviewVote.Value.UP)
@@ -120,11 +125,25 @@ class ReviewSerializer(serializers.ModelSerializer):
                 return "up" if v.value == ReviewVote.Value.UP else "down"
         return None
 
+    def get_reported_by_me(self, obj):
+        request = self.context.get("request")
+        if request is None or not request.user.is_authenticated:
+            return False
+        reviewer = getattr(request.user, "reviewer_profile", None)
+        if reviewer is None:
+            return False
+        return any(r.reported_by_id == reviewer.id for r in obj.reports.all())
+
     def get_can_reply_unlimited(self, obj):
         request = self.context.get("request")
         if request is None:
             return False
-        return is_paying_customer(request.user)
+        # Same answer for every row in a list — self.context is the same
+        # dict across all of them, so compute this once per request instead
+        # of hitting Subscription once per review.
+        if "_can_reply_unlimited" not in self.context:
+            self.context["_can_reply_unlimited"] = is_paying_customer(request.user)
+        return self.context["_can_reply_unlimited"]
 
     def get_reply_limit(self, obj):
         return ReviewReply.MAX_FREE_REPLIES_PER_REVIEW

@@ -43,7 +43,13 @@ class ReviewerProfile(models.Model):
     is_blocked = models.BooleanField(
         default=False, help_text="Blocked reviewers cannot submit new reviews"
     )
+    strikes = models.PositiveIntegerField(
+        default=0,
+        help_text="One strike per reported review. Auto-blocked at STRIKES_TO_BLOCK.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    STRIKES_TO_BLOCK = 3
 
     class Meta:
         ordering = ["-reputation"]
@@ -106,6 +112,25 @@ class EmailVerificationToken(models.Model):
 
     def __str__(self):
         return f"Verification for {self.user.email}"
+
+
+class PasswordResetToken(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, related_name="password_reset_tokens", on_delete=models.CASCADE
+    )
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    VALID_HOURS = 2
+
+    @property
+    def is_valid(self):
+        age = timezone.now() - self.created_at
+        return self.used_at is None and age.total_seconds() < self.VALID_HOURS * 3600
+
+    def __str__(self):
+        return f"Password reset for {self.user.email}"
 
 
 class ReviewerBadge(models.Model):

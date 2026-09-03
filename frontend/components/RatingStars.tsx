@@ -18,7 +18,7 @@ export default function RatingStars({
           </span>
         ))}
       </span>
-      <span className="text-sm font-medium text-stone-600">{rating.toFixed(1)}</span>
+      <span className="text-sm font-medium text-stone-900">{rating.toFixed(1)}</span>
     </span>
   );
 }

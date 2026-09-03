@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Listing, Review } from "@/lib/api";
 import { apiFetch, getSession } from "@/lib/client-session";
 import { useListingSuggestions } from "@/lib/useListingSuggestions";
+import { PRICING_ENABLED } from "@/lib/features";
 
 interface Claim {
   id: number;
@@ -47,6 +48,15 @@ export default function DashboardPage() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    if (!PRICING_ENABLED) {
+      const ov = await apiFetch<Overview>("/owner/overview/");
+      if (!ov.ok) {
+        setError("Could not load your dashboard. Is the API running?");
+        return;
+      }
+      setOverview(ov.data);
+      return;
+    }
     const [ov, bill, planList] = await Promise.all([
       apiFetch<Overview>("/owner/overview/"),
       apiFetch<Billing>("/billing/status/"),
@@ -168,6 +178,7 @@ export default function DashboardPage() {
       </section>
 
       {/* Billing */}
+      {PRICING_ENABLED && (
       <section className="mt-10">
         <h2 className="text-lg font-bold text-stone-900">Subscription</h2>
         {billing?.provider_configured === false && (
@@ -231,6 +242,7 @@ export default function DashboardPage() {
           </div>
         )}
       </section>
+      )}
     </div>
   );
 }
