@@ -25,11 +25,11 @@ export default function UserMenu({ session }: { session: Session }) {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
-  async function signOut() {
-    await apiFetch("/auth/logout/", { method: "POST" });
+  function signOut() {
     clearSession();
     router.replace("/login");
     router.refresh();
+    apiFetch("/auth/logout/", { method: "POST" }).catch(() => {});
   }
 
   return (
