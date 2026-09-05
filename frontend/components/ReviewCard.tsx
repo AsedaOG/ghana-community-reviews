@@ -41,6 +41,8 @@ export default function ReviewCard({
   const [replies, setReplies] = useState<ReviewReply[]>(review.replies);
   const [reported, setReported] = useState(review.reported_by_me);
   const [reporting, setReporting] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
 
   async function saveEdit(e: React.FormEvent) {
     e.preventDefault();
@@ -99,18 +101,24 @@ export default function ReviewCard({
     setVoting(false);
   }
 
-  async function report() {
+  function toggleReport() {
     if (!session || reporting || reported) return;
-    if (!window.confirm("Report this review as abusive or false? Our moderators will take a look.")) {
-      return;
-    }
+    setReportOpen((v) => !v);
+  }
+
+  async function submitReport(e: React.FormEvent) {
+    e.preventDefault();
+    const reason = reportReason.trim();
+    if (!reason || reporting) return;
     setReporting(true);
     const res = await apiFetch<{ detail?: string }>(`/reviews/${review.id}/report/`, {
       method: "POST",
+      body: { reason },
     });
     setReporting(false);
     if (res.ok) {
       setReported(true);
+      setReportOpen(false);
     } else {
       window.alert(
         (res.data as { detail?: string } | null)?.detail ?? "Could not submit the report."
@@ -148,6 +156,14 @@ export default function ReviewCard({
                 year: "numeric",
               })}
             </p>
+            {showListing && (
+              <p className="mt-0.5 text-xs font-medium text-primary-700">
+                at{" "}
+                <a href={`/listing/${review.listing.slug}`} className="hover:underline">
+                  {review.listing.name}
+                </a>
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -251,15 +267,6 @@ export default function ReviewCard({
         </div>
       )}
 
-      {showListing && (
-        <p className="mt-3 text-xs text-stone-500">
-          Reviewing:{" "}
-          <a href={`/listing/${review.listing.slug}`} className="font-medium text-primary-700 hover:underline">
-            {review.listing.name}
-          </a>
-        </p>
-      )}
-
       {review.owner_response && (
         <div className="mt-4 rounded border-l-4 border-gold-500 bg-gold-100/50 p-3">
           <p className="text-xs font-bold uppercase tracking-wide text-gold-600">
@@ -298,7 +305,7 @@ export default function ReviewCard({
           <button
             type="button"
             disabled={!session || reporting || reported}
-            onClick={report}
+            onClick={toggleReport}
             title={session ? "Report this review" : "Log in to report"}
             className={`ml-auto flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition disabled:cursor-not-allowed ${
               reported
@@ -310,6 +317,43 @@ export default function ReviewCard({
           </button>
         )}
       </div>
+
+      {reportOpen && (
+        <form onSubmit={submitReport} className="mt-2 space-y-2 rounded-lg border border-stone-200 bg-stone-50 p-3">
+          <label className="block text-xs font-medium text-stone-600">
+            Why are you reporting this review?
+          </label>
+          <textarea
+            autoFocus
+            required
+            rows={2}
+            maxLength={255}
+            value={reportReason}
+            onChange={(e) => setReportReason(e.target.value)}
+            placeholder="e.g. this review is fake, abusive, or about the wrong place"
+            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-primary-500"
+          />
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={reporting || !reportReason.trim()}
+              className="rounded-lg bg-clay-500 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+            >
+              {reporting ? "Submitting…" : "Submit report"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setReportOpen(false);
+                setReportReason("");
+              }}
+              className="text-xs font-medium text-stone-500"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
       <ReviewReplies
         reviewId={review.id}

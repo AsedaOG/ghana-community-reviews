@@ -136,10 +136,16 @@ class ReviewViewSet(
         if Report.objects.filter(review=review, reported_by=reviewer).exists():
             return Response({"detail": "You already reported this review."}, status=400)
 
+        reason = (request.data.get("reason") or "").strip()[:255]
+        if not reason:
+            return Response(
+                {"detail": "Please tell us why you're reporting this review."}, status=400
+            )
+
         Report.objects.create(
             review=review,
             reported_by=reviewer,
-            reason=(request.data.get("reason") or "").strip()[:255],
+            reason=reason,
         )
 
         return Response(

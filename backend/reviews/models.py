@@ -149,7 +149,7 @@ class Report(models.Model):
     reported_by = models.ForeignKey(
         ReviewerProfile, related_name="reports_filed", on_delete=models.CASCADE
     )
-    reason = models.CharField(max_length=255, blank=True)
+    reason = models.CharField(max_length=255)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
     decided_by = models.ForeignKey(
         "auth.User", related_name="report_decisions", on_delete=models.SET_NULL,
