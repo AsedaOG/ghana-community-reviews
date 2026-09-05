@@ -12,12 +12,26 @@ const PUBLIC_PATHS = [
   "/reset-password",
 ];
 
+/** Public browsing, Glassdoor-style: anyone can see what's here — the
+ * landing page, categories, search, and a listing's reviews — without an
+ * account. Writing a review, voting, replying, reporting, and every
+ * account-specific page still need one; that's enforced by the API and by
+ * each page's own UI, not by this list. Matched separately from
+ * PUBLIC_PATHS (rather than folded into it as another prefix) so that
+ * /listing/<slug> is public but /listing/<slug>/review is not — a plain
+ * "/listing" prefix would let both through. */
+function isPublicBrowsePath(pathname: string): boolean {
+  if (pathname === "/" || pathname === "/search") return true;
+  if (pathname === "/category" || pathname.startsWith("/category/")) return true;
+  return /^\/listing\/[^/]+\/?$/.test(pathname);
+}
+
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
-  const isPublic = PUBLIC_PATHS.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`)
-  );
+  const isPublic =
+    PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`)) ||
+    isPublicBrowsePath(pathname);
   const hasSession = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
 
   if (!hasSession && !isPublic) {

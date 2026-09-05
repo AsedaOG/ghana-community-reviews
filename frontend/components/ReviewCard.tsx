@@ -131,6 +131,10 @@ export default function ReviewCard({
     : 0;
   const canReplyMore = review.can_reply_unlimited || myReplyCount < review.reply_limit;
 
+  const TEASER_LENGTH = 220;
+  const isTeaser = !session && savedBody.length > TEASER_LENGTH;
+  const displayBody = isTeaser ? `${savedBody.slice(0, TEASER_LENGTH).trimEnd()}…` : savedBody;
+
   if (deleted) return null;
 
   return (
@@ -244,8 +248,16 @@ export default function ReviewCard({
           <RatingStars rating={savedRating} />
           <h4 className="mt-1 font-semibold text-stone-900">{savedTitle}</h4>
           <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-stone-600">
-            {savedBody}
+            {displayBody}
           </p>
+          {isTeaser && (
+            <Link
+              href="/register"
+              className="mt-1 inline-block text-xs font-semibold text-primary-700 hover:underline"
+            >
+              Sign up free to read the full review →
+            </Link>
+          )}
           {review.has_evidence && (
             <p className="mt-2 text-xs font-medium text-primary-600">
               📎 Supporting evidence submitted for admin verification

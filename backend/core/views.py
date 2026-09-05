@@ -1,7 +1,7 @@
 from django.db import connection
 from django.db.models import Count, Q
 from rest_framework import mixins, viewsets
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 
 from .models import Area, Category, Listing, ListingRequest, Region
 from .serializers import (
@@ -23,6 +23,7 @@ class RegionViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = RegionSerializer
     lookup_field = "slug"
     pagination_class = None
+    permission_classes = [AllowAny]
 
 
 class AreaViewSet(viewsets.ReadOnlyModelViewSet):
@@ -48,6 +49,7 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = CategorySerializer
     lookup_field = "slug"
     pagination_class = None
+    permission_classes = [AllowAny]
 
 
 class ListingViewSet(viewsets.ModelViewSet):
@@ -67,6 +69,8 @@ class ListingViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == "create":
             return [IsAdminUser()]
+        if self.action in ("list", "retrieve"):
+            return [AllowAny()]
         return [IsAuthenticated()]
 
     def get_queryset(self):

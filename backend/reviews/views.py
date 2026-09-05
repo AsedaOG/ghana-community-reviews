@@ -2,7 +2,7 @@ from django.db.models import Count, Prefetch, Q
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.models import ReviewerBadge, ReviewerProfile
@@ -32,6 +32,10 @@ class ReviewViewSet(
     def get_permissions(self):
         if self.action in ("partial_update", "destroy"):
             return [IsAuthenticated(), IsReviewOwner()]
+        # Reading reviews is public (browsable, Glassdoor-style); writing,
+        # voting, and reporting still need an account.
+        if self.action in ("list", "retrieve"):
+            return [AllowAny()]
         return super().get_permissions()
 
     def get_queryset(self):

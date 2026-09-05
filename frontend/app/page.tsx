@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Category, Paginated, Review } from "@/lib/api";
-import { apiGet } from "@/lib/server-api";
+import { apiGet, getServerSession } from "@/lib/server-api";
 import SearchBar from "@/components/SearchBar";
 import ReviewCard from "@/components/ReviewCard";
 
@@ -23,7 +23,8 @@ const LEVELS = [
 ];
 
 export default async function HomePage() {
-  const [categories, recent] = await Promise.all([
+  const [session, categories, recent] = await Promise.all([
+    getServerSession(),
     apiGet<Category[]>("/categories/", 300), // rarely changes — cache 5min
     apiGet<Paginated<Review>>("/reviews/?ordering=-created_at&page_size=6"),
   ]);
@@ -46,6 +47,22 @@ export default async function HomePage() {
           <div className="mx-auto mt-8 flex justify-center">
             <SearchBar />
           </div>
+          {!session && (
+            <div className="mx-auto mt-6 flex justify-center gap-3">
+              <Link
+                href="/register"
+                className="rounded-lg bg-gold-500 px-5 py-2.5 text-sm font-semibold text-primary-900 hover:bg-gold-400"
+              >
+                Join free
+              </Link>
+              <Link
+                href="/login"
+                className="rounded-lg border border-white/40 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
+              >
+                Sign in
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
