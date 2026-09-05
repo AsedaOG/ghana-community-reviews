@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { API_URL } from "./api";
 import { parseSession, SESSION_COOKIE, type Session } from "./session";
 
@@ -20,6 +21,8 @@ export async function apiGet<T>(
   revalidateSeconds?: number
 ): Promise<T | null> {
   const session = await getServerSession();
+  let sessionExpired = false;
+  let result: T | null = null;
   try {
     const res = await fetch(`${API_URL}${path}`, {
       ...(revalidateSeconds != null
@@ -27,9 +30,19 @@ export async function apiGet<T>(
         : { cache: "no-store" as const }),
       headers: session ? { Authorization: `Token ${session.token}` } : undefined,
     });
-    if (!res.ok) return null;
-    return (await res.json()) as T;
+    // A cookie was sent but the API rejected it — the token was invalidated
+    // (e.g. by logging out elsewhere), not a real 404. Middleware only
+    // checks that the cookie exists, so this is the one place that catches
+    // a stale token. Left outside the surrounding try/catch further down:
+    // redirect() throws by design and a catch block would swallow it.
+    if (res.status === 401 && session) {
+      sessionExpired = true;
+    } else if (res.ok) {
+      result = (await res.json()) as T;
+    }
   } catch {
-    return null;
+    // network/parse error — fall through and return null below
   }
+  if (sessionExpired) redirect("/session-expired");
+  return result;
 }
